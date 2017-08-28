@@ -1,0 +1,18 @@
+logging:
+  level: INFO
+  loggers:
+    com.tapifolti.azurestorage: DEBUG
+  appenders:
+    - type: console
+    - type: file
+      threshold: INFO
+      logFormat: "%-6level [%d{HH:mm:ss.SSS}] [%t] %logger{5} - %X{code} %msg %n"
+      currentLogFilename: azurestorage.log
+      archivedLogFilenamePattern: azurestorage-%d{yyyy-MM-dd}-%i.log.gz
+      archivedFileCount: 5
+      timeZone: UTC
+      maxFileSize: 100MB
+connectionString:
+  isHTTTPS: true
+  accountName: tapifolti
+  accountKey: OqyzcC1TaEA3BE/d187n3J9cSHPMfU1G+WdtpDC+n8urHQX9BZFPzrnqgwvvSJsPhYZNEMOW7iuS4YTxSlhCOw==
