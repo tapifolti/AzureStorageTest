@@ -16,3 +16,7 @@ connectionString:
   isHTTTPS: true
   accountName: tapifolti
   accountKey: OqyzcC1TaEA3BE/d187n3J9cSHPMfU1G+WdtpDC+n8urHQX9BZFPzrnqgwvvSJsPhYZNEMOW7iuS4YTxSlhCOw==
+storageLayout:
+  rootContainerName: projects
+  unpackedContainerName: unpacked
+  zipExtension: 7z
