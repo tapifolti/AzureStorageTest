@@ -1,13 +1,9 @@
 package com.tapifolti.azurestorage.api;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Collections;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -17,30 +13,33 @@ import java.util.zip.ZipFile;
  */
 public class FilesFromZip {
 
-//    public void extractAll(URI fromZip, Path toDirectory) throws IOException {
-//        FileSystems.newFileSystem(fromZip, Collections.emptyMap())
-//                .getRootDirectories()
-//                .forEach(root -> {
-//                    try {
-//                        Files.walk(root).forEach(path -> {
-//                            try {
-//                                Files.copy(path, toDirectory);
-//                            } catch (IOException iex) {}
-//                        });
-//                    } catch (IOException iex) {}
-//                });
-//    }
+    private static byte[] bytes = new byte[1024*100];
 
     public void extractAll(File fromZip, File toDirectory) throws IOException {
+        toDirectory.mkdir();
         ZipFile zipFile = new ZipFile(fromZip.getAbsolutePath());
-
         Enumeration<? extends ZipEntry> entries = zipFile.entries();
-
-        // TODO create toDirectory
-        while(entries.hasMoreElements()){
+        while(entries.hasMoreElements()) {
             ZipEntry entry = entries.nextElement();
-            InputStream stream = zipFile.getInputStream(entry);
-            // TODO save file into toDirectory
+            if (entry.isDirectory()) {
+                continue;
+            }
+            String name = entry.getName();
+            // TODO also create folder referrred in 'name'
+            File file = new File(name);
+            File parent = file.getParentFile();
+            if (parent != null) {
+                parent.mkdirs();
+            }
+            // TODO save file into toDirectory + subfolder
+            InputStream is = zipFile.getInputStream(entry);
+            FileOutputStream fos = new FileOutputStream(file);
+            int length;
+            while ((length = is.read(bytes)) >= 0) {
+                fos.write(bytes, 0, length);
+            }
+            is.close();
+            fos.close();
         }
     }
 }

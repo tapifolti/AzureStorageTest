@@ -24,9 +24,9 @@ public class DownloadResource {
 
     @GET
     @Produces("image/png")
-    @Path("front/{id}")
+    @Path("front/{project}")
     @Timed
-    public Response front(@PathParam("id") NonEmptyStringParam id) {
+    public Response front(@PathParam("project") NonEmptyStringParam project) {
         // TODO
 //        BufferedImage image = ...;
 //
@@ -44,9 +44,9 @@ public class DownloadResource {
 
     @GET
     @Produces("image/png")
-    @Path("rear/{id}")
+    @Path("rear/{project}")
     @Timed
-    public Response rear(@PathParam("id") NonEmptyStringParam id) {
+    public Response rear(@PathParam("project") NonEmptyStringParam project) {
         // TODO
         return Response.ok().entity("Not yet implemented").build();
     }
