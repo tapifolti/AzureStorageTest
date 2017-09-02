@@ -14,7 +14,7 @@ import java.io.FileInputStream;
  */
 public class Upload {
 
-    public void upload(String storageConnectionString, String containerName, File fileToUpload) throws Exception {
+    public void upload(String storageConnectionString, String containerName, String blolbName, File fileToUpload) throws Exception {
         CloudStorageAccount account = CloudStorageAccount.parse(storageConnectionString);
         CloudBlobClient serviceClient = account.createCloudBlobClient();
 
@@ -23,7 +23,7 @@ public class Upload {
         container.createIfNotExists();
 
         // Upload an image file.
-        CloudBlockBlob blob = container.getBlockBlobReference(fileToUpload.getName());
+        CloudBlockBlob blob = container.getBlockBlobReference(blolbName);
         blob.upload(new FileInputStream(fileToUpload), fileToUpload.length());
 
         // catch (FileNotFoundException fileNotFoundException) {

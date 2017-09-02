@@ -1,4 +1,4 @@
-package com.tapifolti.azurestorage.upload;
+package com.tapifolti.azurestorage.api;
 
 /**
  * Created by tapifolti on 8/28/2017.
@@ -6,13 +6,9 @@ package com.tapifolti.azurestorage.upload;
 
 import java.io.*;
 
-import com.tapifolti.azurestorage.api.ConnectionString;
-import com.tapifolti.azurestorage.api.Upload;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
 
 import static junit.framework.TestCase.assertTrue;
 
@@ -28,7 +24,7 @@ public class UploadProjectsTest {
         Upload loader = new Upload();
         File toUpload = new File("L:\\Zsuzsa\\PeterProject\\PeterAdat\\projects\\testproject.7z");
         try {
-            loader.upload(connectionString.getConnectionString(), CONTAINER_NAME, toUpload);
+            loader.upload(connectionString.getConnectionString(), CONTAINER_NAME, toUpload.getName(), toUpload);
             assertTrue(true);
         } catch (Exception ex) {
             log.error("Upload error", ex);

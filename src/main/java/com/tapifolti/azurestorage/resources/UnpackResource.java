@@ -36,36 +36,64 @@ public class UnpackResource {
         this.storageLayout = storageLayout;
     }
 
+    private static class DeleteVisitor extends SimpleFileVisitor<java.nio.file.Path> {
+        @Override
+        public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException
+        {
+            file.toFile().delete();
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult postVisitDirectory(java.nio.file.Path dir, IOException e) throws IOException {
+            if (e == null) {
+                dir.toFile().delete();
+                return FileVisitResult.CONTINUE;
+            } else {
+                // if api was not succ, tree-walk is stopped, dir is not cleaned up
+                throw e;
+            }
+        }
+    }
+
     private static class UploadVisitor extends SimpleFileVisitor<java.nio.file.Path> {
         private String storageConnectionString;
-        private String containerName;
+        private StorageLayout storageLayout;
+        private java.nio.file.Path toDirectory;
+        private  String name;
 
-        public UploadVisitor(String storageConnectionString, String containerName) {
+        public UploadVisitor(String storageConnectionString, StorageLayout storageLayout, File toDirectory, String name) {
             this.storageConnectionString = storageConnectionString;
-            this.containerName = containerName;
+            this.storageLayout = storageLayout;
+            this.toDirectory = toDirectory.toPath();
+            this.name = name;
         }
 
         @Override
         public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException
         {
             File fileToUpload = file.toFile();
+            java.nio.file.Path relative = file.relativize(toDirectory);
+            String relativeFile = relative.toString().replace(java.io.File.separator, "/");
             try {
-                // TODO manage subfolders
-                new Upload().upload(storageConnectionString, containerName, fileToUpload);
-                Files.deleteIfExists(file);
+                // manage blolb's subfolders
+                new Upload().upload(storageConnectionString, storageLayout.getRootContainerName(),
+                        storageLayout.getUnpackedContainerName() + "/" + name + "/" + relativeFile, fileToUpload);
             } catch (Exception ex) {
                 throw new IOException(ex);
+            } finally {
+                fileToUpload.delete();
             }
             return FileVisitResult.CONTINUE;
         }
 
         @Override
-        public FileVisitResult postVisitDirectory(java.nio.file.Path dir, IOException e)
-                throws IOException {
+        public FileVisitResult postVisitDirectory(java.nio.file.Path dir, IOException e) throws IOException {
             if (e == null) {
-                Files.delete(dir);
+                dir.toFile().delete();
                 return FileVisitResult.CONTINUE;
             } else {
+                // if api was not succ, tree-walk is stopped, dir is not cleaned up
                 throw e;
             }
         }
@@ -76,13 +104,13 @@ public class UnpackResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Path("project/{name}")
     @Timed
-    public Response unpack(@PathParam("id") NonEmptyStringParam name) {
+    public Response unpack(@PathParam("name") NonEmptyStringParam name) {
         String result = "Done";
 
         String destTempFolderPath = "temp_" + new Long(System.currentTimeMillis()).toString();
         File destTempFolder = new File(destTempFolderPath);
-        File destZipFilePath = new File(destTempFolderPath + "/" + name + "." + storageLayout.getZipExtension());
-        File toDirectory = new File(destZipFilePath.toPath().toString() + ".unpack");
+        File destZipFilePath = new File(destTempFolderPath + java.io.File.separator + name.get().get() + "." + storageLayout.getZipExtension());
+        File toDirectory = new File(destTempFolderPath + java.io.File.separator + name.get().get());
         try {
             // Downaload
             try {
@@ -104,9 +132,9 @@ public class UnpackResource {
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(result).build();
             }
 
-            // TODO upload all files to a new sub-container
+            // upload all files to the container with folders in blob's name
             try {
-                UploadVisitor visitor = new UploadVisitor(connectionString, storageLayout.getRootContainerName());
+                UploadVisitor visitor = new UploadVisitor(connectionString, storageLayout, toDirectory, name.get().get());
                 Files.walkFileTree(toDirectory.toPath(), visitor);
             } catch (Exception ex) {
                 log.error("Upload error", ex);
@@ -114,13 +142,20 @@ public class UnpackResource {
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(result).build();
             }
 
-
             // send OK response
             return Response.ok().entity(result).build();
         } finally {
             // Cleanup
-            toDirectory.delete();
-            destTempFolder.delete();
+            try {
+                Files.deleteIfExists(destZipFilePath.toPath());
+                destTempFolder.delete();    // contains zip
+                DeleteVisitor deleter = new DeleteVisitor();
+                Files.walkFileTree(toDirectory.toPath(), deleter);
+                toDirectory.delete();       // contains unzipped files
+            } catch (IOException iex) {
+                log.error("Cleanup error", iex);
+
+            }
 
         }
     }
