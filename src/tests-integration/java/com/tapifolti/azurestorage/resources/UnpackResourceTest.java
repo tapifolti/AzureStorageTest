@@ -37,7 +37,7 @@ public class UnpackResourceTest {
 
     @Test
     public void testUnpackResource() {
-        assertTrue(resources.target("/unpack/project/testproject").request().get(String.class).equals("Done"));
+        assertTrue(resources.target("/unpack/project/testproject").request().get(String.class).equals("Done")); // testproject, 2017_07_14__16_15_19
     }
 
     @Test

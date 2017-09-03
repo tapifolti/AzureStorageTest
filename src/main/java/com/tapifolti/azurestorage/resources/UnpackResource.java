@@ -143,9 +143,11 @@ public class UnpackResource {
         } finally {
             // Cleanup
             try {
-                DeleteVisitor deleter = new DeleteVisitor();
-                Files.walkFileTree(destTempFolder.toPath(), deleter);
-                destTempFolder.delete();
+                if (destTempFolder.exists()) {
+                    DeleteVisitor deleter = new DeleteVisitor();
+                    Files.walkFileTree(destTempFolder.toPath(), deleter);
+                    destTempFolder.delete();
+                }
             } catch (IOException iex) {
                 log.error("Cleanup error", iex);
             }

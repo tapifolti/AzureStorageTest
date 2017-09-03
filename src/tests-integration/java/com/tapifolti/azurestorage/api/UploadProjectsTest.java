@@ -22,7 +22,7 @@ public class UploadProjectsTest {
     @Test
     public void uploadTest() {
         Upload loader = new Upload();
-        File toUpload = new File("L:\\Zsuzsa\\PeterProject\\PeterAdat\\projects\\testproject.7z"); // 2017_07_14__16_15_19
+        File toUpload = new File("L:\\Zsuzsa\\PeterProject\\PeterAdat\\projects\\2017_07_14__16_15_19.7z"); // testproject
         try {
             loader.upload(connectionString.getConnectionString(), CONTAINER_NAME, toUpload.getName(), toUpload);
             assertTrue(true);
