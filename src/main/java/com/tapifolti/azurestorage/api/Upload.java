@@ -24,7 +24,9 @@ public class Upload {
 
         // Upload an image file.
         CloudBlockBlob blob = container.getBlockBlobReference(blolbName);
-        blob.upload(new FileInputStream(fileToUpload), fileToUpload.length());
+        try (FileInputStream fis = new FileInputStream(fileToUpload)) {
+            blob.upload(fis, fileToUpload.length());
+        }
 
         // catch (FileNotFoundException fileNotFoundException) {
         // catch (StorageException storageException) {

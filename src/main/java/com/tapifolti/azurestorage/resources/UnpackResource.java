@@ -15,7 +15,6 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -56,29 +55,27 @@ public class UnpackResource {
         }
     }
 
-    private static class UploadVisitor extends SimpleFileVisitor<java.nio.file.Path> {
+    public static class UploadVisitor extends SimpleFileVisitor<java.nio.file.Path> {
         private String storageConnectionString;
         private StorageLayout storageLayout;
-        private java.nio.file.Path toDirectory;
-        private  String name;
+        private java.nio.file.Path fromDirectory;
 
-        public UploadVisitor(String storageConnectionString, StorageLayout storageLayout, File toDirectory, String name) {
+        public UploadVisitor(String storageConnectionString, StorageLayout storageLayout, File fromDirectory) {
             this.storageConnectionString = storageConnectionString;
             this.storageLayout = storageLayout;
-            this.toDirectory = toDirectory.toPath();
-            this.name = name;
+            this.fromDirectory = fromDirectory.toPath();
         }
 
         @Override
         public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException
         {
             File fileToUpload = file.toFile();
-            java.nio.file.Path relative = file.relativize(toDirectory);
+            java.nio.file.Path relative = fromDirectory.relativize(file);
             String relativeFile = relative.toString().replace(java.io.File.separator, "/");
             try {
                 // manage blolb's subfolders
                 new Upload().upload(storageConnectionString, storageLayout.getRootContainerName(),
-                        storageLayout.getUnpackedContainerName() + "/" + name + "/" + relativeFile, fileToUpload);
+                        storageLayout.getUnpackedContainerName() + "/" + relativeFile, fileToUpload);
             } catch (Exception ex) {
                 throw new IOException(ex);
             } finally {
@@ -109,8 +106,7 @@ public class UnpackResource {
 
         String destTempFolderPath = "temp_" + new Long(System.currentTimeMillis()).toString();
         File destTempFolder = new File(destTempFolderPath);
-        File destZipFilePath = new File(destTempFolderPath + java.io.File.separator + name.get().get() + "." + storageLayout.getZipExtension());
-        File toDirectory = new File(destTempFolderPath + java.io.File.separator + name.get().get());
+        File destZipFilePath = new File(destTempFolderPath, name.get().get() + "." + storageLayout.getZipExtension());
         try {
             // Downaload
             try {
@@ -118,27 +114,27 @@ public class UnpackResource {
                 new Download().download(connectionString, storageLayout.getRootContainerName(), destZipFilePath);
             } catch (Exception ex) {
                 log.error("Downalod error", ex);
-                result = ex.getMessage();
+                result = "Downalod error\n" + ex.getMessage();
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(result).build();
             }
 
             // Unzip
             try {
-                toDirectory.mkdir();
-                new FilesFromZip().extractAll(destZipFilePath, toDirectory);
+                new FilesFrom7Zip().extractAll(destZipFilePath, destTempFolder);
+                destZipFilePath.delete();
             } catch (Exception ex) {
                 log.error("Unzip error", ex);
-                result = ex.getMessage();
+                result = "Unzip error\n" + ex.getMessage();
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(result).build();
             }
 
-            // upload all files to the container with folders in blob's name
+            // Upload all files to the container with folders in blob's name
             try {
-                UploadVisitor visitor = new UploadVisitor(connectionString, storageLayout, toDirectory, name.get().get());
-                Files.walkFileTree(toDirectory.toPath(), visitor);
+                UploadVisitor visitor = new UploadVisitor(connectionString, storageLayout, destTempFolder);
+                Files.walkFileTree(destTempFolder.toPath(), visitor);
             } catch (Exception ex) {
                 log.error("Upload error", ex);
-                result = ex.getMessage();
+                result = "Upload error\n" + ex.getMessage();
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(result).build();
             }
 
@@ -147,14 +143,11 @@ public class UnpackResource {
         } finally {
             // Cleanup
             try {
-                Files.deleteIfExists(destZipFilePath.toPath());
-                destTempFolder.delete();    // contains zip
                 DeleteVisitor deleter = new DeleteVisitor();
-                Files.walkFileTree(toDirectory.toPath(), deleter);
-                toDirectory.delete();       // contains unzipped files
+                Files.walkFileTree(destTempFolder.toPath(), deleter);
+                destTempFolder.delete();
             } catch (IOException iex) {
                 log.error("Cleanup error", iex);
-
             }
 
         }
