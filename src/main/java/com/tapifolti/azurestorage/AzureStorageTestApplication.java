@@ -1,6 +1,7 @@
 package com.tapifolti.azurestorage;
 
 import com.tapifolti.azurestorage.api.ConnectionString;
+import com.tapifolti.azurestorage.api.StorageLayout;
 import com.tapifolti.azurestorage.resources.DownloadResource;
 import com.tapifolti.azurestorage.resources.UnpackResource;
 import io.dropwizard.Application;
@@ -18,7 +19,9 @@ public class AzureStorageTestApplication extends Application<AzureStorageTestCon
         @Override
         protected void configure() {
             ConnectionString connectionString = configuration.getConnectionString();
+            StorageLayout storageLayout = configuration.getStorageLayout();
             bind(connectionString).to(ConnectionString.class);
+            bind(storageLayout).to(StorageLayout.class);
         }
     }
 
@@ -40,7 +43,7 @@ public class AzureStorageTestApplication extends Application<AzureStorageTestCon
     public void run(final AzureStorageTestConfiguration configuration,
                     final Environment environment) {
         environment.jersey().register(new DependencyInjection(configuration));
-        environment.jersey().register(new DownloadResource(configuration.getConnectionString()));
+        environment.jersey().register(new DownloadResource(configuration.getConnectionString(), configuration.getStorageLayout()));
         environment.jersey().register(new UnpackResource(configuration.getConnectionString(), configuration.getStorageLayout()));
     }
 

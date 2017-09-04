@@ -37,8 +37,7 @@ public class UnpackResource {
 
     private static class DeleteVisitor extends SimpleFileVisitor<java.nio.file.Path> {
         @Override
-        public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException
-        {
+        public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
             file.toFile().delete();
             return FileVisitResult.CONTINUE;
         }
@@ -67,8 +66,7 @@ public class UnpackResource {
         }
 
         @Override
-        public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException
-        {
+        public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
             File fileToUpload = file.toFile();
             java.nio.file.Path relative = fromDirectory.relativize(file);
             String relativeFile = relative.toString().replace(java.io.File.separator, "/");
@@ -96,9 +94,39 @@ public class UnpackResource {
         }
     }
 
+    private static class Measure {
+
+        public long downloadMsec = 0;
+        public long unzipMsec = 0;
+        public long uploadMsec = 0;
+    }
+
+    private String wrapToHTML(String msg, Measure measure) {
+        String html = "<!DOCTYPE html>\n" +
+                "<html>\n" +
+                "<body>\n" +
+                "<p>MM</p>\n" +
+                "<p/>\n" +
+                "<p/>\n" +
+                "<p>MS</p>\n" +
+                "</body>\n" +
+                "</html>";
+        if (measure != null) {
+            String measureStr = "Download: " + Long.toString(measure.downloadMsec) + " msec<br>" +
+                                "Unzip: " + Long.toString(measure.unzipMsec) + " msec<br>" +
+                                "Upload: " + Long.toString(measure.uploadMsec) + " msec";
+            html = html.replace("MM", measureStr);
+        }
+        if (msg != null && !msg.isEmpty()) {
+            String msgStr = msg.replace("\n", "<br>");
+            html = html.replace("MS", msgStr);
+        }
+        return html;
+    }
+
     // TODO make it async
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_HTML)
     @Path("project/{name}")
     @Timed
     public Response unpack(@PathParam("name") NonEmptyStringParam name) {
@@ -107,39 +135,46 @@ public class UnpackResource {
         String destTempFolderPath = "temp_" + new Long(System.currentTimeMillis()).toString();
         File destTempFolder = new File(destTempFolderPath);
         File destZipFilePath = new File(destTempFolderPath, name.get().get() + "." + storageLayout.getZipExtension());
+        Measure measure = new Measure();
         try {
             // Downaload
             try {
                 destTempFolder.mkdir();
-                new Download().download(connectionString, storageLayout.getRootContainerName(), destZipFilePath);
+                long timestart = System.currentTimeMillis();
+                new Download().downloadFile(connectionString, storageLayout.getRootContainerName(), destZipFilePath);
+                measure.downloadMsec = System.currentTimeMillis() - timestart;
             } catch (Exception ex) {
                 log.error("Downalod error", ex);
                 result = "Downalod error\n" + ex.getMessage();
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(result).build();
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(wrapToHTML(result, measure)).build();
             }
 
             // Unzip
             try {
+                long timestart = System.currentTimeMillis();
                 new FilesFrom7Zip().extractAll(destZipFilePath, destTempFolder);
+                measure.unzipMsec = System.currentTimeMillis() - timestart;
                 destZipFilePath.delete();
             } catch (Exception ex) {
                 log.error("Unzip error", ex);
                 result = "Unzip error\n" + ex.getMessage();
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(result).build();
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(wrapToHTML(result, measure)).build();
             }
 
             // Upload all files to the container with folders in blob's name
             try {
                 UploadVisitor visitor = new UploadVisitor(connectionString, storageLayout, destTempFolder);
+                long timestart = System.currentTimeMillis();
                 Files.walkFileTree(destTempFolder.toPath(), visitor);
+                measure.uploadMsec = System.currentTimeMillis() - timestart;
             } catch (Exception ex) {
                 log.error("Upload error", ex);
                 result = "Upload error\n" + ex.getMessage();
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(result).build();
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(wrapToHTML(result, measure)).build();
             }
 
             // send OK response
-            return Response.ok().entity(result).build();
+            return Response.ok().entity(wrapToHTML(result, measure)).build();
         } finally {
             // Cleanup
             try {

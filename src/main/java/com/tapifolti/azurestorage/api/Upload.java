@@ -6,6 +6,7 @@ import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 
@@ -24,7 +25,7 @@ public class Upload {
 
         // Upload an image file.
         CloudBlockBlob blob = container.getBlockBlobReference(blolbName);
-        try (FileInputStream fis = new FileInputStream(fileToUpload)) {
+        try (BufferedInputStream fis = new BufferedInputStream(new FileInputStream(fileToUpload))) {
             blob.upload(fis, fileToUpload.length());
         }
 

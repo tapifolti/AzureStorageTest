@@ -10,10 +10,10 @@ import java.util.Map;
 
 public class AzureStorageTestConfiguration extends Configuration {
     @NotNull
-    private ConnectionString connectionString = null;
+    private ConnectionString connectionString = new ConnectionString();
 
     @NotNull
-    private StorageLayout storageLayout = null;
+    private StorageLayout storageLayout = new StorageLayout();
 
     @JsonProperty("connectionString")
     public ConnectionString getConnectionString() {
@@ -22,7 +22,7 @@ public class AzureStorageTestConfiguration extends Configuration {
 
     @JsonProperty("connectionString")
     public void setConnectionString(Map<String, String> params) {
-        ConnectionString connectionString = new ConnectionString(Boolean.parseBoolean(params.get("isHTTTPS")), params.get("accountName"), params.get("accountKey"));
+        connectionString = new ConnectionString(Boolean.parseBoolean(params.get("isHTTTPS")), params.get("accountName"), params.get("accountKey"));
     }
 
     @JsonProperty("storageLayout")
@@ -30,7 +30,7 @@ public class AzureStorageTestConfiguration extends Configuration {
 
     @JsonProperty("storageLayout")
     public void setStorageLayout(Map<String, String> params) {
-        StorageLayout storageLayout = new StorageLayout();
+        storageLayout = new StorageLayout();
         storageLayout.setRootContainerName(params.get("rootContainerName"));
         storageLayout.setUnpackedContainerName(params.get("unpackedContainerName"));
         storageLayout.setZipExtension(params.get("zipExtension"));
