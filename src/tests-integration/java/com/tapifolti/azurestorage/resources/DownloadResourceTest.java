@@ -53,4 +53,15 @@ public class DownloadResourceTest {
         }
         assertTrue(status == Response.Status.OK.getStatusCode());
     }
+
+    @Test
+    public void testFail() {
+        int status = Response.Status.OK.getStatusCode();
+        try {
+            status = resources.target("/download/rear/xxxxxx").request().get().getStatus();
+        } catch (Exception ex ) {
+            log.error("Error thrown: ", ex);
+        }
+        assertTrue(status == Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+    }
 }
